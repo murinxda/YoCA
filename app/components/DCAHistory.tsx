@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnits } from "viem";
-import { ADDRESSES, type VaultId } from "@/lib/constants";
+import { ADDRESSES, CHAIN, type VaultId } from "@/lib/constants";
 import type { DcaExecution } from "@/db/schema";
 
 type EnrichedExecution = DcaExecution & {
@@ -131,9 +131,9 @@ export function DCAHistory({ executions }: DCAHistoryProps) {
                   }}
                 >
                   <span className={`badge ${statusClass}`}>{exec.status}</span>
-                  {exec.txHash && (
+                  {exec.txHash && CHAIN.blockExplorers?.default.url && (
                     <a
-                      href={`https://basescan.org/tx/${exec.txHash}`}
+                      href={`${CHAIN.blockExplorers.default.url}/tx/${exec.txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ fontSize: 12 }}

@@ -1,25 +1,18 @@
 "use client";
 
-import { useAccount, useChainId, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { SUPPORTED_CHAIN_ID } from "@/lib/constants";
+import { useSiweAuth } from "@/app/lib/siwe-context";
 
 export function Header() {
-  const { address, isConnected, isReconnecting } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { address } = useAccount();
   const chainId = useChainId();
   const isCorrectChain = chainId === SUPPORTED_CHAIN_ID;
+  const { signOut } = useSiweAuth();
 
   const truncatedAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : "";
-
-  const handleConnect = () => {
-    // Try injected (MetaMask) first, fall back to first available
-    const injected = connectors.find((c) => c.id === "injected");
-    const connector = injected ?? connectors[0];
-    if (connector) connect({ connector });
-  };
 
   return (
     <header
@@ -39,61 +32,44 @@ export function Header() {
         YoCA
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {isReconnecting ? null : isConnected ? (
-          <>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 13,
-                color: "var(--text-secondary)",
-              }}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: isCorrectChain
-                    ? "var(--success)"
-                    : "var(--warning)",
-                }}
-              />
-              {isCorrectChain ? "Base" : "Wrong network"}
-            </div>
-            <button
-              type="button"
-              onClick={() => disconnect()}
-              style={{
-                padding: "6px 12px",
-                background: "var(--bg-secondary)",
-                borderRadius: "var(--radius-md)",
-                fontSize: 13,
-                fontFamily: "monospace",
-                color: "var(--text-primary)",
-                cursor: "pointer",
-              }}
-              title="Click to disconnect"
-            >
-              {truncatedAddress}
-              <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.5 }}>✕</span>
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="btn btn-primary"
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            color: "var(--text-secondary)",
+          }}
+        >
+          <span
             style={{
-              width: "auto",
-              padding: "8px 16px",
-              fontSize: 13,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: isCorrectChain
+                ? "var(--success)"
+                : "var(--warning)",
             }}
-            onClick={handleConnect}
-          >
-            Connect Wallet
-          </button>
-        )}
+          />
+          {isCorrectChain ? "Base" : "Wrong network"}
+        </div>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          style={{
+            padding: "6px 12px",
+            background: "var(--bg-secondary)",
+            borderRadius: "var(--radius-md)",
+            fontSize: 13,
+            fontFamily: "monospace",
+            color: "var(--text-primary)",
+            cursor: "pointer",
+          }}
+          title="Click to sign out"
+        >
+          {truncatedAddress}
+          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.5 }}>✕</span>
+        </button>
       </div>
     </header>
   );

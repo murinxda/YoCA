@@ -3,18 +3,16 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
-interface IERC20 {
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function approve(address spender, uint256 amount) external returns (bool);
-}
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 /// @title YoCAExecutor
 /// @notice Thin execution layer for DCA swaps between Yo Protocol vault tokens on Base
 /// @custom:oz-upgrades
-contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable {
+contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable, ReentrancyGuardTransient {
+    using SafeERC20 for IERC20;
+
     address public keeper;
     mapping(address => bool) public allowedRouters;
 
@@ -27,6 +25,7 @@ contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable {
     );
     event KeeperUpdated(address indexed oldKeeper, address indexed newKeeper);
     event RouterUpdated(address indexed router, bool allowed);
+    event TokensRescued(address indexed token, address indexed to, uint256 amount);
 
     error OnlyKeeper();
     error RouterNotAllowed();
@@ -62,23 +61,25 @@ contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable {
         uint256 minAmountOut,
         address router,
         bytes calldata swapData
-    ) external onlyKeeper {
+    ) external onlyKeeper nonReentrant {
         if (!allowedRouters[router]) revert RouterNotAllowed();
 
         IERC20 tokenInContract = IERC20(tokenIn);
         IERC20 tokenOutContract = IERC20(tokenOut);
 
-        tokenInContract.transferFrom(user, address(this), amountIn);
-        tokenInContract.approve(router, amountIn);
+        tokenInContract.safeTransferFrom(user, address(this), amountIn);
+        tokenInContract.forceApprove(router, amountIn);
+
+        uint256 balanceBefore = tokenOutContract.balanceOf(address(this));
 
         (bool success, ) = router.call(swapData);
         require(success, "YoCAExecutor: swap failed");
 
-        uint256 amountOut = tokenOutContract.balanceOf(address(this));
+        uint256 amountOut = tokenOutContract.balanceOf(address(this)) - balanceBefore;
         if (amountOut < minAmountOut) revert InsufficientOutput();
 
-        tokenOutContract.transfer(user, amountOut);
-        tokenInContract.approve(router, 0);
+        tokenOutContract.safeTransfer(user, amountOut);
+        tokenInContract.forceApprove(router, 0);
 
         emit DCAExecuted(user, tokenIn, tokenOut, amountIn, amountOut);
     }
@@ -98,7 +99,8 @@ contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable {
 
     /// @notice Rescue stuck tokens (safety function)
     function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
-        IERC20(token).transfer(to, amount);
+        IERC20(token).safeTransfer(to, amount);
+        emit TokensRescued(token, to, amount);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

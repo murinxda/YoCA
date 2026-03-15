@@ -5,17 +5,22 @@ import { eq, and } from "drizzle-orm";
 import { getAuthenticatedAddress } from "@/lib/auth";
 import { getSwapQuote } from "@/lib/keeper";
 import { ADDRESSES, type VaultId } from "@/lib/constants";
+import { isValidUUID } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authAddress = getAuthenticatedAddress(request);
+  const authAddress = await getAuthenticatedAddress();
   if (!authAddress) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
+
   const db = getDb();
 
   const user = await db.query.users.findFirst({

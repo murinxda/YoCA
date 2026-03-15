@@ -4,6 +4,7 @@ import { users, dcaOrders, dcaExecutions } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getAuthenticatedAddress } from "@/lib/auth";
 import { executeSingleOrder } from "@/lib/executor";
+import { isValidUUID } from "@/lib/validation";
 
 export const maxDuration = 60;
 
@@ -11,12 +12,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const authAddress = getAuthenticatedAddress(request);
+  const authAddress = await getAuthenticatedAddress();
   if (!authAddress) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
+
   const db = getDb();
 
   const user = await db.query.users.findFirst({

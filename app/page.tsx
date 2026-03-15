@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./lib/api";
+import { useSiweAuth } from "./lib/siwe-context";
 import {
   Header,
   VaultBalances,
@@ -18,8 +19,100 @@ import { type DcaOrder, type DcaExecution } from "@/db/schema";
 
 type Tab = "portfolio" | "history";
 
+function WelcomeScreen() {
+  const { address, isConnected } = useAccount();
+  const { connectAsync, connectors } = useConnect();
+  const { isSigningIn, signIn } = useSiweAuth();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGetStarted = async () => {
+    setError(null);
+    try {
+      if (address) {
+        await signIn(address);
+      } else {
+        const injected = connectors.find((c) => c.id === "injected");
+        const result = await connectAsync({ connector: (injected ?? connectors[0])! });
+        await signIn(result.accounts[0]);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Sign-in failed";
+      if (!msg.toLowerCase().includes("user rejected")) {
+        setError(msg);
+      }
+    }
+  };
+
+  return (
+    <div className="welcome">
+      <div className="welcome-content">
+        <div className="welcome-logo">YoCA</div>
+        <p className="welcome-tagline">Yo Cost Average</p>
+        <p className="welcome-description">
+          Automated DCA into yield-bearing Yo Protocol vaults on Base.
+          Set your strategy once and let YoCA handle the rest.
+        </p>
+
+        <div className="welcome-features">
+          <div className="welcome-feature">
+            <div className="welcome-feature-icon">
+              <span>&#x21C4;</span>
+            </div>
+            <span>Auto-swap stables into ETH &amp; BTC vaults on your schedule</span>
+          </div>
+          <div className="welcome-feature">
+            <div className="welcome-feature-icon" style={{ background: "rgba(34, 197, 94, 0.1)" }}>
+              <span>&#x2191;</span>
+            </div>
+            <span>Earn yield on both sides while your DCA runs</span>
+          </div>
+          <div className="welcome-feature">
+            <div className="welcome-feature-icon" style={{ background: "rgba(245, 158, 11, 0.1)" }}>
+              <span>&#x25CE;</span>
+            </div>
+            <span>Set price limits and slippage controls for every order</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="welcome-footer">
+        {error && (
+          <p style={{
+            fontSize: 13,
+            color: "var(--danger)",
+            textAlign: "center",
+            marginBottom: 12,
+            maxWidth: 340,
+            margin: "0 auto 12px",
+          }}>
+            {error}
+          </p>
+        )}
+        <button
+          type="button"
+          className="welcome-cta"
+          onClick={handleGetStarted}
+          disabled={isSigningIn}
+        >
+          {isSigningIn ? (
+            <>
+              <span className="spinner" />
+              Signing in…
+            </>
+          ) : isConnected ? (
+            "Sign In"
+          ) : (
+            "Connect Wallet"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { address, isConnected, isReconnecting } = useAccount();
+  const { isSignedIn, isLoading: isSessionLoading, isSigningIn } = useSiweAuth();
 
   const [tab, setTab] = useState<Tab>("portfolio");
   const [depositVault, setDepositVault] = useState<VaultConfig | null>(null);
@@ -31,10 +124,10 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   const fetchDCAData = useCallback(async () => {
-    if (!address) return;
+    if (!address || !isSignedIn) return;
     setIsLoading(true);
     try {
-      const response = await apiFetch(`/api/dca?address=${address}`, undefined, address);
+      const response = await apiFetch(`/api/dca?address=${address}`);
       const data = await response.json();
       setOrders(data.orders || []);
       setExecutions(data.executions || []);
@@ -43,16 +136,16 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, isSignedIn]);
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (isConnected && address && isSignedIn) {
       fetchDCAData();
     } else {
       setOrders([]);
       setExecutions([]);
     }
-  }, [isConnected, address, fetchDCAData]);
+  }, [isConnected, address, isSignedIn, fetchDCAData]);
 
   const handleCreateDCA = async (config: DCAConfig) => {
     if (!address) return;
@@ -60,7 +153,7 @@ export default function Home() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...config, address }),
-    }, address);
+    });
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -92,7 +185,7 @@ export default function Home() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
-    }, address);
+    });
 
     if (!response.ok) throw new Error("Failed to update order");
 
@@ -103,7 +196,7 @@ export default function Home() {
   const handleCancel = async (id: string) => {
     const response = await apiFetch(`/api/dca/${id}`, {
       method: "DELETE",
-    }, address);
+    });
 
     if (!response.ok) throw new Error("Failed to cancel order");
 
@@ -114,7 +207,7 @@ export default function Home() {
   const handleExecuteNow = async (id: string) => {
     const response = await apiFetch(`/api/dca/${id}/execute`, {
       method: "POST",
-    }, address);
+    });
 
     const result = await response.json();
 
@@ -135,27 +228,28 @@ export default function Home() {
     return result;
   };
 
-  if (isReconnecting) {
+  // Show loading while session/wallet state is resolving
+  if (isReconnecting || isSessionLoading) {
     return (
-      <div style={{ minHeight: "100vh" }}>
-        <Header />
-        <div
-          className="container"
-          style={{
-            paddingTop: 80,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div className="spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
-          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-            Loading…
-          </p>
+      <div className="welcome">
+        <div className="welcome-content">
+          <div className="welcome-logo">YoCA</div>
+          <div style={{ marginTop: 24 }}>
+            <div className="spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
+          </div>
         </div>
       </div>
     );
+  }
+
+  // Show welcome page when signing in (after connect, waiting for signature)
+  if (isSigningIn) {
+    return <WelcomeScreen />;
+  }
+
+  // Show welcome page when not signed in
+  if (!isSignedIn) {
+    return <WelcomeScreen />;
   }
 
   const activeOrders = orders.filter((o) => o.status !== "cancelled");
@@ -165,13 +259,11 @@ export default function Home() {
       <Header />
 
       <div className="container" style={{ paddingTop: 16 }}>
-        {/* Stable Vault Balances */}
         <VaultBalances
           onDeposit={(vault) => setDepositVault(vault)}
           isRefreshing={isRefreshingVaults}
         />
 
-        {/* Tab Navigation */}
         <div
           style={{
             display: "flex",
@@ -206,7 +298,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Tab Content */}
         {tab === "portfolio" ? (
           <div className="fade-in">
             <DCAList
@@ -237,7 +328,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Modals */}
       <DepositFlow
         vault={depositVault}
         isOpen={!!depositVault}

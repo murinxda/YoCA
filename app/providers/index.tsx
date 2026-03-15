@@ -5,6 +5,7 @@ import { type State, WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { YieldProvider } from "@yo-protocol/react";
 import { wagmiConfig } from "@/app/lib/wagmi";
+import { SiweProvider } from "@/app/lib/siwe-context";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,7 @@ export function Providers({
           partnerId={"9999"}
           defaultSlippageBps={50}
         >
-          {children}
+          <SiweProvider>{children}</SiweProvider>
         </YieldProvider>
       </QueryClientProvider>
     </WagmiProvider>

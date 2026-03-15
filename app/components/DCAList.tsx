@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
 import { ADDRESSES, type VaultId } from "@/lib/constants";
 import { apiFetch } from "@/app/lib/api";
@@ -111,7 +110,6 @@ const SUCCESS_MESSAGES: Record<ActionType, string> = {
 };
 
 export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: DCAListProps) {
-  const { address } = useAccount();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -130,7 +128,7 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
 
     if (type === "executeNow") {
       setQuoteLoading(true);
-      apiFetch(`/api/dca/${order.id}/quote`, undefined, address)
+      apiFetch(`/api/dca/${order.id}/quote`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => setSwapPreview(data))
         .catch(() => setSwapPreview(null))

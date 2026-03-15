@@ -36,7 +36,7 @@ export const dcaOrders = pgTable("dca_orders", {
   targetVault: varchar("target_vault", { length: 10 }).notNull(), // yoETH, yoBTC
   amount: numeric("amount", { precision: 78, scale: 0 }).notNull(), // raw token amount (wei)
   periodDays: integer("period_days").notNull(),
-  slippageBps: integer("slippage_bps").notNull().default(100), // 1%
+  slippageBps: integer("slippage_bps").notNull().default(50), // 0.5%
   minPrice: numeric("min_price", { precision: 36, scale: 18 }),
   maxPrice: numeric("max_price", { precision: 36, scale: 18 }),
   status: dcaStatusEnum("status").notNull().default("active"),
@@ -55,6 +55,12 @@ export const dcaExecutions = pgTable("dca_executions", {
   price: numeric("price", { precision: 36, scale: 18 }),
   status: executionStatusEnum("status").notNull().default("pending"),
   executedAt: timestamp("executed_at").defaultNow().notNull(),
+});
+
+export const siweNonces = pgTable("siwe_nonces", {
+  nonce: varchar("nonce", { length: 128 }).primaryKey(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;

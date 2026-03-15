@@ -8,6 +8,20 @@
       "when": 1773480369898,
       "tag": "0000_brave_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773612259768,
+      "tag": "0001_soft_the_spike",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773617229293,
+      "tag": "0002_true_darkstar",
+      "breakpoints": true
     }
   ]
 }

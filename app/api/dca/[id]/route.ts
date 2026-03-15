@@ -3,23 +3,35 @@ import { getDb } from "@/db";
 import { users, dcaOrders } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthenticatedAddress } from "@/lib/auth";
+import { isValidUUID } from "@/lib/validation";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authAddress = getAuthenticatedAddress(request);
+  const authAddress = await getAuthenticatedAddress();
   if (!authAddress) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
-  const body = await request.json();
-  const { status } = body;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
 
-  if (!status || !["active", "paused", "cancelled"].includes(status)) {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const validStatuses = ["active", "paused", "cancelled"] as const;
+  const status = typeof body.status === "string" ? body.status : "";
+  if (!validStatuses.includes(status as typeof validStatuses[number])) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
+  const safeStatus = status as typeof validStatuses[number];
 
   const db = getDb();
 
@@ -33,7 +45,7 @@ export async function PATCH(
 
   const [updated] = await db
     .update(dcaOrders)
-    .set({ status })
+    .set({ status: safeStatus })
     .where(and(eq(dcaOrders.id, id), eq(dcaOrders.userId, user.id)))
     .returning();
 
@@ -48,12 +60,16 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authAddress = getAuthenticatedAddress(request);
+  const authAddress = await getAuthenticatedAddress();
   if (!authAddress) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Invalid order ID" }, { status: 400 });
+  }
+
   const db = getDb();
 
   const user = await db.query.users.findFirst({

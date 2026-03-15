@@ -147,4 +147,4 @@ export const PERIOD_OPTIONS = [
   { label: "Monthly", days: 30 },
 ];
 
-export const DEFAULT_SLIPPAGE_BPS = 100; // 1%
+export const DEFAULT_SLIPPAGE_BPS = 50; // 0.5%

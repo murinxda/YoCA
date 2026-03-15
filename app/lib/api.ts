@@ -1,17 +1,13 @@
 "use client";
 
 /**
- * Fetch wrapper that passes the connected wallet address
- * as an X-Wallet-Address header for server-side identity.
+ * Fetch wrapper for API calls.
+ * Authentication is handled via iron-session cookies (set during SIWE sign-in),
+ * which are sent automatically by the browser.
  */
 export async function apiFetch(
   path: string,
   init?: RequestInit,
-  walletAddress?: string
 ): Promise<Response> {
-  const headers = new Headers(init?.headers);
-  if (walletAddress) {
-    headers.set("x-wallet-address", walletAddress);
-  }
-  return fetch(path, { ...init, headers });
+  return fetch(path, { ...init, credentials: "same-origin" });
 }
