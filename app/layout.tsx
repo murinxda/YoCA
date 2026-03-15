@@ -36,14 +36,12 @@ export const metadata: Metadata = {
     title: "YoCA – Yo Cost Average",
     description:
       "Automated DCA into yield-bearing Yo Protocol vaults on Base. Deposit stables, set your strategy, and earn yield while you accumulate.",
-    images: ["/hero.png"],
   },
   twitter: {
     card: "summary_large_image",
     title: "YoCA – Yo Cost Average",
     description:
       "Automated DCA into yield-bearing Yo Protocol vaults on Base",
-    images: ["/hero.png"],
   },
   other: {
     "base:app_id": "69b69047993ed474082936d4",
