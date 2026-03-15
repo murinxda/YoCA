@@ -1,0 +1,42 @@
+{
+  "name": "yoca",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "fork": "bash scripts/fork.sh",
+    "seed-fork": "bash scripts/seed-fork.sh"
+  },
+  "dependencies": {
+    "@base-org/account": "^2.5.2",
+    "@neondatabase/serverless": "^0.10.0",
+    "@tanstack/react-query": "^5.81.5",
+    "@yo-protocol/core": "^0.0.3",
+    "@yo-protocol/react": "^0.0.3",
+    "drizzle-orm": "^0.39.0",
+    "next": "15.3.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "viem": "^2.31.6",
+    "wagmi": "^2.16.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@next/eslint-plugin-next": "^15.3.4",
+    "@react-native-async-storage/async-storage": "^1.24.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.30.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.4",
+    "typescript": "^5"
+  }
+}
