@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
 import { ADDRESSES, type VaultId } from "@/lib/constants";
+import { apiFetch } from "@/app/lib/api";
 import type { DcaOrder } from "@/db/schema";
 
 type ActionType = "pause" | "resume" | "cancel" | "executeNow";
@@ -11,6 +13,20 @@ interface PendingAction {
   type: ActionType;
   orderId: string;
   order: DcaOrder;
+}
+
+interface SwapPreview {
+  price: number;
+  expectedAmountOut: string;
+  minAmountOut: string;
+  sellAmount: string;
+  sellDecimals: number;
+  buyDecimals: number;
+  sellSymbol: string;
+  sellVaultName: string;
+  buySymbol: string;
+  buyVaultName: string;
+  slippageBps: number;
 }
 
 interface DCAListProps {
@@ -50,12 +66,12 @@ const ACTION_CONFIG: Record<ActionType, {
   isDangerous: boolean;
 }> = {
   executeNow: {
-    title: "Execute Now",
+    title: "Execution Preview",
     getDescription: (order) => {
       const src = ADDRESSES.vaults[order.sourceVault as VaultId];
       const tgt = ADDRESSES.vaults[order.targetVault as VaultId];
       const amount = formatRawAmount(order.amount, src?.decimals ?? 6);
-      return `This will immediately execute a swap of ${amount} ${src?.name ?? order.sourceVault} into ${tgt?.name ?? order.targetVault}. Your next scheduled execution will be rescheduled based on the current interval.`;
+      return `Preview of swapping ${amount} ${src?.name ?? order.sourceVault} into ${tgt?.name ?? order.targetVault} at current market rates. If you're happy with the quote, you can execute it now. Your next scheduled execution will be rescheduled based on the current interval.`;
     },
     confirmLabel: "Execute Now",
     loadingLabel: "Executing…",
@@ -95,11 +111,14 @@ const SUCCESS_MESSAGES: Record<ActionType, string> = {
 };
 
 export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: DCAListProps) {
+  const { address } = useAccount();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successType, setSuccessType] = useState<ActionType | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [swapPreview, setSwapPreview] = useState<SwapPreview | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const openConfirm = (type: ActionType, order: DcaOrder) => {
@@ -107,6 +126,16 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
     setPendingAction({ type, orderId: order.id, order });
     setActionError(null);
     setSuccessType(null);
+    setSwapPreview(null);
+
+    if (type === "executeNow") {
+      setQuoteLoading(true);
+      apiFetch(`/api/dca/${order.id}/quote`, undefined, address)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => setSwapPreview(data))
+        .catch(() => setSwapPreview(null))
+        .finally(() => setQuoteLoading(false));
+    }
   };
 
   const closeConfirm = () => {
@@ -302,7 +331,7 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
                             textAlign: "left",
                           }}
                         >
-                          Execute Now
+                          Preview Execution
                         </button>
                       </div>
                     )}
@@ -405,6 +434,60 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
                   {config.getDescription(pendingAction.order)}
                 </p>
 
+                {pendingAction.type === "executeNow" && (
+                  <div
+                    style={{
+                      marginBottom: 16,
+                      padding: "10px 14px",
+                      background: "var(--bg-secondary)",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: 13,
+                      minHeight: 76,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {quoteLoading ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "8px 0", color: "var(--text-secondary)" }}>
+                        <span className="spinner" />
+                        Fetching swap quote…
+                      </div>
+                    ) : swapPreview ? (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, color: "var(--text-secondary)" }}>
+                          <span>You send</span>
+                          <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                            {Number(formatUnits(BigInt(swapPreview.sellAmount), swapPreview.sellDecimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} {swapPreview.sellVaultName}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, color: "var(--text-secondary)" }}>
+                          <span>You receive (est.)</span>
+                          <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                            {Number(formatUnits(BigInt(swapPreview.expectedAmountOut), swapPreview.buyDecimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {swapPreview.buyVaultName}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, color: "var(--text-secondary)" }}>
+                          <span>Exchange rate</span>
+                          <span>
+                            1 {swapPreview.buyVaultName} = {swapPreview.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} {swapPreview.sellVaultName}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-secondary)" }}>
+                          <span>Min. received</span>
+                          <span>
+                            {Number(formatUnits(BigInt(swapPreview.minAmountOut), swapPreview.buyDecimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} {swapPreview.buyVaultName}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ color: "var(--text-secondary)", textAlign: "center", padding: "8px 0" }}>
+                        Quote unavailable
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {actionError && (
                   <div style={{
                     fontSize: 13,
@@ -433,7 +516,7 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
                     className={`btn ${config.isDangerous ? "btn-danger" : "btn-primary"}`}
                     style={{ flex: 1 }}
                     onClick={handleConfirm}
-                    disabled={isConfirming}
+                    disabled={isConfirming || (pendingAction?.type === "executeNow" && (quoteLoading || !swapPreview))}
                   >
                     {isConfirming ? (
                       <>

@@ -2,20 +2,28 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/YoCADCA.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "../src/YoCAExecutor.sol";
 
 contract DeployMainnet is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(deployerPrivateKey);
 
-        // Set these before deploying
         address keeper = vm.envAddress("KEEPER_ADDRESS");
-        address router1inch = vm.envOr("ROUTER_1INCH", address(0)); // 0x1111111254EEB25477B68fb85Ed929f73A960582
+        address router1inch = vm.envOr("ROUTER_1INCH", address(0));
         address router0x = vm.envOr("ROUTER_0X", address(0));
 
         vm.startBroadcast(deployerPrivateKey);
 
-        YoCADCA dca = new YoCADCA();
+        YoCAExecutor impl = new YoCAExecutor();
+
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(YoCAExecutor.initialize, (deployer))
+        );
+
+        YoCAExecutor dca = YoCAExecutor(address(proxy));
         dca.setKeeper(keeper);
 
         if (router1inch != address(0)) {
@@ -28,7 +36,8 @@ contract DeployMainnet is Script {
         vm.stopBroadcast();
 
         console.log("=== Base Mainnet Deployment ===");
-        console.log("YoCADCA: ", address(dca));
-        console.log("Keeper:  ", keeper);
+        console.log("Implementation:  ", address(impl));
+        console.log("YoCAExecutor:    ", address(proxy));
+        console.log("Keeper:          ", keeper);
     }
 }

@@ -189,13 +189,15 @@ export default function Home() {
               onClick={() => setTab(t)}
               style={{
                 flex: 1,
-                padding: "10px 16px",
+                padding: "9px 16px",
                 borderRadius: "var(--radius-sm)",
                 background: tab === t ? "var(--bg-card)" : "transparent",
+                border: tab === t ? "1px solid var(--accent)" : "1px solid transparent",
                 color:
                   tab === t ? "var(--text-primary)" : "var(--text-secondary)",
                 fontSize: 14,
                 fontWeight: 600,
+                cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
             >

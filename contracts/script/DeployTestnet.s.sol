@@ -2,7 +2,8 @@
 pragma solidity 0.8.24;
 
 import "forge-std/Script.sol";
-import "../src/YoCADCA.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "../src/YoCAExecutor.sol";
 import "../src/mocks/MockERC20.sol";
 import "../src/mocks/MockYoVault.sol";
 import "../src/mocks/MockSwapRouter.sol";
@@ -30,30 +31,29 @@ contract DeployTestnet is Script {
         MockSwapRouter router = new MockSwapRouter();
 
         // Set exchange rates (approximate real-world rates for testing)
-        // yoUSD <-> yoETH: 1 ETH ~ 2000 USD
-        router.setRate(address(yoUSD), address(yoETH), 1, 2000);    // 1 yoUSD -> 0.0005 yoETH
-        router.setRate(address(yoETH), address(yoUSD), 2000, 1);    // 1 yoETH -> 2000 yoUSD
-
-        // yoUSD <-> yoBTC: 1 BTC ~ 50000 USD
-        router.setRate(address(yoUSD), address(yoBTC), 1, 50000);   // 1 yoUSD -> 0.00002 yoBTC
-        router.setRate(address(yoBTC), address(yoUSD), 50000, 1);   // 1 yoBTC -> 50000 yoUSD
-
-        // yoEUR <-> yoETH: 1 ETH ~ 1850 EUR
+        router.setRate(address(yoUSD), address(yoETH), 1, 2000);
+        router.setRate(address(yoETH), address(yoUSD), 2000, 1);
+        router.setRate(address(yoUSD), address(yoBTC), 1, 50000);
+        router.setRate(address(yoBTC), address(yoUSD), 50000, 1);
         router.setRate(address(yoEUR), address(yoETH), 1, 1850);
         router.setRate(address(yoETH), address(yoEUR), 1850, 1);
-
-        // yoEUR <-> yoBTC: 1 BTC ~ 46000 EUR
         router.setRate(address(yoEUR), address(yoBTC), 1, 46000);
         router.setRate(address(yoBTC), address(yoEUR), 46000, 1);
 
-        // Deploy YoCADCA
-        YoCADCA dca = new YoCADCA();
+        // Deploy YoCAExecutor via UUPS proxy
+        YoCAExecutor impl = new YoCAExecutor();
+
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(YoCAExecutor.initialize, (deployer))
+        );
+
+        YoCAExecutor dca = YoCAExecutor(address(proxy));
         dca.setKeeper(deployer);
         dca.setRouterAllowed(address(router), true);
 
         vm.stopBroadcast();
 
-        // Output addresses for easy copy-paste
         console.log("");
         console.log("========================================");
         console.log("  Base Sepolia Testnet Deployment");
@@ -72,19 +72,17 @@ contract DeployTestnet is Script {
         console.log("  yoBTC: ", address(yoBTC));
         console.log("");
         console.log("Infrastructure:");
-        console.log("  Router:  ", address(router));
-        console.log("  YoCADCA: ", address(dca));
+        console.log("  Router:          ", address(router));
+        console.log("  Implementation:  ", address(impl));
+        console.log("  YoCAExecutor (proxy): ", address(proxy));
         console.log("");
         console.log("--- Copy into .env ---");
         console.log("");
-
-        // Log env-ready lines (forge console.log can't do string concat,
-        // so we log each address and the user copies them next to the keys)
         console.log("NEXT_PUBLIC_MOCK_YOUSD=", address(yoUSD));
         console.log("NEXT_PUBLIC_MOCK_YOEUR=", address(yoEUR));
         console.log("NEXT_PUBLIC_MOCK_YOETH=", address(yoETH));
         console.log("NEXT_PUBLIC_MOCK_YOBTC=", address(yoBTC));
         console.log("NEXT_PUBLIC_MOCK_SWAP_ROUTER=", address(router));
-        console.log("NEXT_PUBLIC_YOCA_CONTRACT=", address(dca));
+        console.log("NEXT_PUBLIC_YOCA_CONTRACT=", address(proxy));
     }
 }

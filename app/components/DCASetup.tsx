@@ -306,6 +306,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                   id="dca-amount"
                   type="text"
                   inputMode="decimal"
+                  autoComplete="off"
                   className="input"
                   placeholder="0.00"
                   style={{ paddingRight: 64 }}
@@ -368,6 +369,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
               id="dca-slippage"
               type="text"
               inputMode="decimal"
+              autoComplete="off"
               className="input"
               value={(slippageBps / 100).toFixed(2)}
               onChange={(e) => {
@@ -396,6 +398,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                     id="dca-min-price"
                     type="text"
                     inputMode="decimal"
+                    autoComplete="off"
                     className="input"
                     placeholder="0"
                     value={minPrice}
@@ -410,6 +413,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                     id="dca-max-price"
                     type="text"
                     inputMode="decimal"
+                    autoComplete="off"
                     className="input"
                     placeholder="0"
                     value={maxPrice}

@@ -41,7 +41,7 @@ contract MockSwapRouter {
     /// @param tokenIn Input token (will be burned)
     /// @param tokenOut Output token (will be minted to caller)
     /// @param amountIn Amount of tokenIn to swap
-    /// @param minAmountOut Minimum amount of tokenOut (ignored in mock - allows testing YoCADCA's check)
+    /// @param minAmountOut Minimum amount of tokenOut (ignored in mock - allows testing YoCAExecutor's check)
     function swap(
         address tokenIn,
         address tokenOut,

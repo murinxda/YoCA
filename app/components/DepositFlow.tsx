@@ -40,6 +40,13 @@ const vaultAbi = [
     inputs: [],
     outputs: [{ name: "", type: "address" }],
   },
+  {
+    name: "previewDeposit",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "assets", type: "uint256" }],
+    outputs: [{ name: "shares", type: "uint256" }],
+  },
 ] as const;
 
 interface DepositFlowProps {
@@ -188,6 +195,7 @@ function useMainnetDeposit(vaultAddress: Address | undefined) {
     reset,
     isLoading: yoDepositLoading || yoApproveLoading,
     spender: ADDRESSES.yoGateway as Address,
+    vaultState,
   };
 }
 
@@ -246,6 +254,29 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
     amountBigInt > BigInt(0) &&
     allowance !== undefined &&
     allowance < amountBigInt;
+
+  // Deposit preview: expected shares for the entered amount
+  const { data: previewShares, isLoading: previewLoading } = useReadContract({
+    address: vaultAddress,
+    abi: vaultAbi,
+    functionName: "previewDeposit",
+    args: [amountBigInt],
+    query: { enabled: useDirectDeposit && !!vaultAddress && amountBigInt > BigInt(0) },
+  });
+
+  const sdkExchangeRate = mainnet.vaultState?.exchangeRate;
+  const sdkDecimals = mainnet.vaultState?.decimals ?? vault?.decimals ?? 18;
+
+  const expectedShares: bigint | undefined = useDirectDeposit
+    ? previewShares
+    : sdkExchangeRate && sdkExchangeRate > BigInt(0) && amountBigInt > BigInt(0)
+      ? (amountBigInt * BigInt(10) ** BigInt(sdkDecimals)) / sdkExchangeRate
+      : undefined;
+
+  const exchangeRate =
+    expectedShares && expectedShares > BigInt(0) && amountBigInt > BigInt(0)
+      ? Number(amountBigInt) / Number(expectedShares)
+      : undefined;
 
   // React to approval confirmed -> proceed to deposit
   useEffect(() => {
@@ -467,6 +498,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
                   id="deposit-amount"
                   type="text"
                   inputMode="decimal"
+                  autoComplete="off"
                   className="input"
                   placeholder="0.00"
                   value={amount}
@@ -500,6 +532,53 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
                 </div>
               )}
             </div>
+
+            {amountBigInt > BigInt(0) && vault && (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "10px 14px",
+                  background: "var(--bg-secondary)",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: 13,
+                  minHeight: 52,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span>You will receive</span>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                    {expectedShares !== undefined
+                      ? `${Number(formatUnits(expectedShares, vault.decimals)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} ${vault.name}`
+                      : `– ${vault.name}`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <span>Exchange rate</span>
+                  <span>
+                    1 {vault.name} ={" "}
+                    {exchangeRate !== undefined
+                      ? `${exchangeRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 })} ${vault.underlyingSymbol}`
+                      : `– ${vault.underlyingSymbol}`}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {!useDirectDeposit && (
               <div

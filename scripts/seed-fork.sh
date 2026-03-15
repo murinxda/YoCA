@@ -42,8 +42,8 @@ cast send "$EURC" "transfer(address,uint256)(bool)" "$RECIPIENT" 10000000000 \
 cast rpc anvil_stopImpersonatingAccount "$EURC_WHALE" --rpc-url "$RPC" > /dev/null
 echo "  Done."
 
-# Deploy YoCADCA on the fork
-echo "[4/5] Deploying YoCADCA contract..."
+# Deploy YoCAExecutor on the fork
+echo "[4/5] Deploying YoCAExecutor contract..."
 PRIVATE_KEY="$(grep '^PRIVATE_KEY=' .env | cut -d= -f2)"
 
 DEPLOY_OUTPUT=$(cd contracts && KEEPER_ADDRESS="$RECIPIENT" forge script script/DeployMainnet.s.sol \
@@ -51,19 +51,23 @@ DEPLOY_OUTPUT=$(cd contracts && KEEPER_ADDRESS="$RECIPIENT" forge script script/
   --broadcast \
   --private-key "$PRIVATE_KEY" \
   --sender "$RECIPIENT" \
-  2>&1)
+  2>&1) || {
+  echo "  ERROR: forge script failed:"
+  echo "$DEPLOY_OUTPUT"
+  exit 1
+}
 
-YOCA_ADDR=$(echo "$DEPLOY_OUTPUT" | grep "YoCADCA:" | awk '{print $NF}')
+YOCA_ADDR=$(echo "$DEPLOY_OUTPUT" | grep "YoCAExecutor" | grep -oE '0x[0-9a-fA-F]{40}' | tail -1) || true
 
 if [ -z "$YOCA_ADDR" ]; then
-  echo "  WARNING: Could not parse YoCADCA address from deploy output."
+  echo "  WARNING: Could not parse YoCAExecutor address from deploy output."
   echo "  Deploy output:"
   echo "$DEPLOY_OUTPUT"
 else
-  echo "  YoCADCA deployed at: $YOCA_ADDR"
+  echo "  YoCAExecutor deployed at: $YOCA_ADDR"
 fi
 
-# Whitelist 0x AllowanceHolder router on YoCADCA
+# Whitelist 0x AllowanceHolder router on YoCAExecutor
 ALLOWANCE_HOLDER="0x0000000000001fF3684f28c67538d4D072C22734"
 echo "[5/6] Whitelisting 0x AllowanceHolder router ($ALLOWANCE_HOLDER)..."
 cast send "$YOCA_ADDR" "setRouterAllowed(address,bool)" "$ALLOWANCE_HOLDER" true \

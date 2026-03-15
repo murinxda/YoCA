@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 amount) external returns (bool);
@@ -8,10 +11,10 @@ interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
 }
 
-/// @title YoCADCA
+/// @title YoCAExecutor
 /// @notice Thin execution layer for DCA swaps between Yo Protocol vault tokens on Base
-contract YoCADCA {
-    address public owner;
+/// @custom:oz-upgrades
+contract YoCAExecutor is OwnableUpgradeable, UUPSUpgradeable {
     address public keeper;
     mapping(address => bool) public allowedRouters;
 
@@ -25,24 +28,22 @@ contract YoCADCA {
     event KeeperUpdated(address indexed oldKeeper, address indexed newKeeper);
     event RouterUpdated(address indexed router, bool allowed);
 
-    error OnlyOwner();
     error OnlyKeeper();
     error RouterNotAllowed();
     error InsufficientOutput();
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert OnlyOwner();
-        _;
-    }
 
     modifier onlyKeeper() {
         if (msg.sender != keeper) revert OnlyKeeper();
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        owner = msg.sender;
-        emit KeeperUpdated(address(0), address(0));
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
     }
 
     /// @notice Execute a DCA swap for a user
@@ -67,24 +68,16 @@ contract YoCADCA {
         IERC20 tokenInContract = IERC20(tokenIn);
         IERC20 tokenOutContract = IERC20(tokenOut);
 
-        // 1. Transfer tokenIn from user to this contract (user must have approved this contract)
         tokenInContract.transferFrom(user, address(this), amountIn);
-
-        // 2. Approve router to spend tokenIn
         tokenInContract.approve(router, amountIn);
 
-        // 3. Execute swap via router
         (bool success, ) = router.call(swapData);
-        require(success, "YoCADCA: swap failed");
+        require(success, "YoCAExecutor: swap failed");
 
-        // 4. Check output
         uint256 amountOut = tokenOutContract.balanceOf(address(this));
         if (amountOut < minAmountOut) revert InsufficientOutput();
 
-        // 5. Transfer tokenOut to user
         tokenOutContract.transfer(user, amountOut);
-
-        // 6. Reset approval
         tokenInContract.approve(router, 0);
 
         emit DCAExecuted(user, tokenIn, tokenOut, amountIn, amountOut);
@@ -108,8 +101,5 @@ contract YoCADCA {
         IERC20(token).transfer(to, amount);
     }
 
-    /// @notice Transfer ownership
-    function setOwner(address newOwner) external onlyOwner {
-        owner = newOwner;
-    }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
