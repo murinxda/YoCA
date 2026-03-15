@@ -15,6 +15,9 @@ export const metadata: Metadata = {
       "Automated DCA into yield-bearing Yo Protocol vaults on Base",
     images: ["/hero.png"],
   },
+  other: {
+    "base:app_id": "69b69047993ed474082936d4",
+  },
 };
 
 export default async function RootLayout({
