@@ -101,17 +101,22 @@ function VaultBalanceCard({
           type="button"
           className="btn btn-secondary"
           style={{
-            width: "auto",
-            padding: "6px 14px",
+            width: 96,
+            padding: "6px 0",
             fontSize: 13,
             flexShrink: 0,
+            textAlign: "center",
+            ...(vault.type === "volatile"
+              ? { opacity: 0.5, pointerEvents: "none" as const }
+              : {}),
           }}
           onClick={(e) => {
             e.stopPropagation();
             onDeposit();
           }}
+          disabled={vault.type === "volatile"}
         >
-          Deposit
+          {vault.type === "volatile" ? "Coming soon" : "Deposit"}
         </button>
       </div>
     </div>

@@ -6,11 +6,13 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useSwitchChain,
 } from "wagmi";
 import { formatUnits, parseUnits, erc20Abi, maxUint256, type Address } from "viem";
 import {
   ADDRESSES,
   CHAIN,
+  SUPPORTED_CHAIN_ID,
   STABLE_VAULTS,
   VOLATILE_VAULTS,
   PERIOD_OPTIONS,
@@ -36,7 +38,9 @@ interface DCASetupProps {
 }
 
 export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const isWrongChain = walletChainId !== SUPPORTED_CHAIN_ID;
   const [sourceVault, setSourceVault] = useState<VaultId>("yoUSD");
   const [targetVault, setTargetVault] = useState<VaultId>("yoETH");
   const [amount, setAmount] = useState("");
@@ -478,7 +482,15 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isCreating}>
               Cancel
             </button>
-            {needsApproval ? (
+            {isWrongChain ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => switchChain({ chainId: SUPPORTED_CHAIN_ID })}
+              >
+                Switch to {CHAIN.name}
+              </button>
+            ) : needsApproval ? (
               <button
                 type="button"
                 className="btn btn-primary"

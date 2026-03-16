@@ -1,13 +1,13 @@
 "use client";
 
-import { useAccount, useChainId } from "wagmi";
-import { SUPPORTED_CHAIN_ID } from "@/lib/constants";
+import { useAccount, useSwitchChain } from "wagmi";
+import { SUPPORTED_CHAIN_ID, CHAIN } from "@/lib/constants";
 import { useSiweAuth } from "@/app/lib/siwe-context";
 
 export function Header() {
-  const { address } = useAccount();
-  const chainId = useChainId();
-  const isCorrectChain = chainId === SUPPORTED_CHAIN_ID;
+  const { address, chainId: walletChainId } = useAccount();
+  const isCorrectChain = walletChainId === SUPPORTED_CHAIN_ID;
+  const { switchChain } = useSwitchChain();
   const { signOut } = useSiweAuth();
 
   const truncatedAddress = address
@@ -32,27 +32,44 @@ export function Header() {
         YoCA
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 13,
-            color: "var(--text-secondary)",
-          }}
-        >
-          <span
+        {isCorrectChain ? (
+          <div
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: isCorrectChain
-                ? "var(--success)"
-                : "var(--warning)",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              color: "var(--text-secondary)",
             }}
-          />
-          {isCorrectChain ? "Base" : "Wrong network"}
-        </div>
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "var(--success)",
+              }}
+            />
+            {CHAIN.name}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => switchChain({ chainId: SUPPORTED_CHAIN_ID })}
+            style={{
+              padding: "6px 12px",
+              background: "rgba(234, 179, 8, 0.15)",
+              border: "1px solid rgba(234, 179, 8, 0.3)",
+              borderRadius: "var(--radius-md)",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--warning)",
+              cursor: "pointer",
+            }}
+          >
+            Switch to {CHAIN.name}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => signOut()}

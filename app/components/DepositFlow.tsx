@@ -6,6 +6,7 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useSwitchChain,
 } from "wagmi";
 import {
   useDeposit as useYoDeposit,
@@ -16,6 +17,7 @@ import { parseUnits, formatUnits, erc20Abi, type Address } from "viem";
 import {
   ADDRESSES,
   CHAIN,
+  SUPPORTED_CHAIN_ID,
   IS_TESTNET,
   IS_LOCAL_FORK,
   DEFAULT_SLIPPAGE_BPS,
@@ -208,7 +210,9 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
   const [step, setStep] = useState<
     "input" | "approving" | "depositing" | "success"
   >("input");
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId: walletChainId } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const isWrongChain = walletChainId !== SUPPORTED_CHAIN_ID;
 
   const vaultAddress = vault?.address as Address | undefined;
 
@@ -620,20 +624,30 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!amountBigInt || isProcessing}
-                onClick={handleSubmit}
-              >
-                {step === "approving"
-                  ? "Approving..."
-                  : step === "depositing"
-                    ? "Depositing..."
-                    : needsApproval
-                      ? "Approve & Deposit"
-                      : "Deposit"}
-              </button>
+              {isWrongChain ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => switchChain({ chainId: SUPPORTED_CHAIN_ID })}
+                >
+                  Switch to {CHAIN.name}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!amountBigInt || isProcessing}
+                  onClick={handleSubmit}
+                >
+                  {step === "approving"
+                    ? "Approving..."
+                    : step === "depositing"
+                      ? "Depositing..."
+                      : needsApproval
+                        ? "Approve & Deposit"
+                        : "Deposit"}
+                </button>
+              )}
             </div>
           </>
         )}
