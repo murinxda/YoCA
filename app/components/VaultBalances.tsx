@@ -1,9 +1,11 @@
 "use client";
 
 import { useAccount } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
 import {
   ADDRESSES,
+  IS_TESTNET,
   STABLE_VAULTS,
   VOLATILE_VAULTS,
   type VaultConfig,
@@ -17,22 +19,51 @@ interface VaultBalancesProps {
 
 const ZERO = BigInt(0);
 
+const ALL_VAULTS = [...STABLE_VAULTS, ...VOLATILE_VAULTS];
+const YO_API = "https://api.yo.xyz";
+
+function useVaultYields() {
+  return useQuery({
+    queryKey: ["vault-yields"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        ALL_VAULTS.map(async (v) => {
+          const res = await fetch(`${YO_API}/api/v1/vault/base/${v.address}`);
+          if (!res.ok) return null;
+          const json = await res.json();
+          return json?.data?.stats?.yield?.["7d"] as string | null;
+        }),
+      );
+      const map: Record<string, string | null> = {};
+      for (let i = 0; i < ALL_VAULTS.length; i++) {
+        map[ALL_VAULTS[i]!.id] = results[i] ?? null;
+      }
+      return map;
+    },
+    enabled: !IS_TESTNET,
+    staleTime: 5 * 60_000,
+  });
+}
+
 function VaultBalanceCard({
   vault,
   shares,
   assets,
   isLoading,
+  yield7d,
   onDeposit,
 }: {
   vault: VaultConfig;
   shares: bigint;
   assets: bigint;
   isLoading: boolean;
+  yield7d?: string | null;
   onDeposit: () => void;
 }) {
   const hasBalance = shares > ZERO;
   const formattedShares = formatUnits(shares, vault.decimals);
   const formattedAssets = formatUnits(assets, vault.decimals);
+  const maxDecimals = vault.type === "stable" ? 2 : 3;
 
   return (
     <div
@@ -56,6 +87,11 @@ function VaultBalanceCard({
           <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
             {vault.underlyingSymbol}
           </div>
+          {yield7d != null && (
+            <div style={{ fontSize: 11, color: "var(--success)", fontWeight: 600, marginTop: 2 }}>
+              {Number(yield7d).toFixed(2)}% APY
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, textAlign: "right" }}>
@@ -67,9 +103,9 @@ function VaultBalanceCard({
           ) : hasBalance ? (
             <>
               <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>
-                {Number(formattedShares).toLocaleString(undefined, {
+                {Number(formattedAssets).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: 3,
+                  maximumFractionDigits: maxDecimals,
                 })}{" "}
                 <span
                   style={{
@@ -78,16 +114,15 @@ function VaultBalanceCard({
                     color: "var(--text-secondary)",
                   }}
                 >
-                  shares
+                  {vault.underlyingSymbol}
                 </span>
               </div>
               <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                ≈{" "}
-                {Number(formattedAssets).toLocaleString(undefined, {
+                {Number(formattedShares).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: 3,
+                  maximumFractionDigits: maxDecimals,
                 })}{" "}
-                {vault.underlyingSymbol}
+                shares
               </div>
             </>
           ) : (
@@ -101,7 +136,7 @@ function VaultBalanceCard({
           type="button"
           className="btn btn-secondary"
           style={{
-            width: 96,
+            width: 72,
             padding: "6px 0",
             fontSize: 13,
             flexShrink: 0,
@@ -116,7 +151,7 @@ function VaultBalanceCard({
           }}
           disabled={vault.type === "volatile"}
         >
-          {vault.type === "volatile" ? "Coming soon" : "Deposit"}
+          {vault.type === "volatile" ? "Soon" : "Deposit"}
         </button>
       </div>
     </div>
@@ -125,6 +160,7 @@ function VaultBalanceCard({
 
 export function VaultBalances({ onDeposit, isRefreshing }: VaultBalancesProps) {
   const { address, isConnected } = useAccount();
+  const { data: yields } = useVaultYields();
 
   const yoUSD = useVaultBalance(ADDRESSES.vaults.yoUSD.address, address);
   const yoEUR = useVaultBalance(ADDRESSES.vaults.yoEUR.address, address);
@@ -213,6 +249,7 @@ export function VaultBalances({ onDeposit, isRefreshing }: VaultBalancesProps) {
             shares={shares}
             assets={assets}
             isLoading={loading}
+            yield7d={yields?.[vault.id]}
             onDeposit={() => onDeposit(vault)}
           />
         ))

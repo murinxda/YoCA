@@ -7,6 +7,7 @@ const connectSrc = [
   "https://*.base.org",
   "https://api.0x.org",
   "https://cca-lite.coinbase.com",
+  "https://api.yo.xyz/",
   "wss:",
   ...(isDev ? ["http://127.0.0.1:*", "http://localhost:*", "ws://127.0.0.1:*", "ws://localhost:*"] : []),
 ].join(" ");

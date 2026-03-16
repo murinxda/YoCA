@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAccount, useSwitchChain } from "wagmi";
 import { SUPPORTED_CHAIN_ID, CHAIN } from "@/lib/constants";
 import { useSiweAuth } from "@/app/lib/siwe-context";
@@ -9,6 +10,7 @@ export function Header() {
   const isCorrectChain = walletChainId === SUPPORTED_CHAIN_ID;
   const { switchChain } = useSwitchChain();
   const { signOut } = useSiweAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const truncatedAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
@@ -72,7 +74,11 @@ export function Header() {
         )}
         <button
           type="button"
-          onClick={() => signOut()}
+          onClick={async () => {
+            setIsSigningOut(true);
+            try { await signOut(); } finally { setIsSigningOut(false); }
+          }}
+          disabled={isSigningOut}
           style={{
             padding: "6px 12px",
             background: "var(--bg-secondary)",
@@ -80,12 +86,17 @@ export function Header() {
             fontSize: 13,
             fontFamily: "monospace",
             color: "var(--text-primary)",
-            cursor: "pointer",
+            cursor: isSigningOut ? "default" : "pointer",
+            opacity: isSigningOut ? 0.7 : 1,
           }}
           title="Click to sign out"
         >
           {truncatedAddress}
-          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.5 }}>✕</span>
+          {isSigningOut ? (
+            <span className="spinner" style={{ marginLeft: 6, width: 12, height: 12, borderWidth: 2, verticalAlign: "middle", display: "inline-block" }} />
+          ) : (
+            <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.5 }}>✕</span>
+          )}
         </button>
       </div>
     </header>

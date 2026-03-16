@@ -31,8 +31,11 @@ function WelcomeScreen() {
       if (address) {
         await signIn(address);
       } else {
-        const injected = connectors.find((c) => c.id === "injected");
-        const result = await connectAsync({ connector: (injected ?? connectors[0])! });
+        const hasInjectedProvider = typeof window !== "undefined" && !!window.ethereum;
+        const connector = hasInjectedProvider
+          ? connectors.find((c) => c.id === "injected") ?? connectors[0]!
+          : connectors.find((c) => c.id === "com.coinbase.wallet") ?? connectors[0]!;
+        const result = await connectAsync({ connector });
         await signIn(result.accounts[0]);
       }
     } catch (err) {
