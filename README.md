@@ -92,7 +92,7 @@ PRIVATE_KEY=0x... forge script script/DeployTestnet.s.sol \
   --rpc-url https://sepolia.base.org --broadcast
 
 # Deploy to Base mainnet
-PRIVATE_KEY=0x... KEEPER_ADDRESS=0x... forge script script/DeployMainnet.s.sol \
+PRIVATE_KEY=0x... KEEPER_ADDRESS=0x... forge script script/DeployMainnet.s.sol:DeployMainnet \
   --rpc-url https://mainnet.base.org --broadcast
 ```
 
