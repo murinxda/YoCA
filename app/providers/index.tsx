@@ -27,7 +27,7 @@ export function Providers({
     <WagmiProvider config={wagmiConfig} initialState={initialState}>
       <QueryClientProvider client={queryClient}>
         <YieldProvider
-          partnerId={"9999"}
+          partnerId={"YoCAMikado"}
           defaultSlippageBps={50}
         >
           <SiweProvider>{children}</SiweProvider>
