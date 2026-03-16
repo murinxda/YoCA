@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { formatUnits } from "viem";
 import { ADDRESSES, type VaultId } from "@/lib/constants";
 import { apiFetch } from "@/app/lib/api";
@@ -234,9 +235,18 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
           <p style={{ color: "var(--text-secondary)", marginBottom: 8 }}>
             No DCA orders yet
           </p>
-          <p style={{ fontSize: 14, color: "var(--text-muted)" }}>
+          <p style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 12 }}>
             Create a DCA order to automatically convert stable assets to volatile vaults over time
           </p>
+          <Link
+            href="/how-it-works"
+            style={{
+              fontSize: 14,
+              color: "var(--text-muted)",
+            }}
+          >
+            How it works &rarr;
+          </Link>
         </div>
       </div>
     );

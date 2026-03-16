@@ -9,7 +9,7 @@ Base Mini Apps are lightweight web apps that run inside the [Coinbase Wallet](ht
 1. **Deposit stables** — Deposit USDC or EURC into yoUSD/yoEUR vaults to earn yield while your funds wait to be swapped
 2. **Configure DCA** — Pick a target vault (yoETH or yoBTC), set an amount per execution, choose a period (daily to monthly), and optionally set min/max price bounds
 3. **Approve** — Grant the YoCAExecutor contract a one-time approval to swap your vault tokens
-4. **Automated execution** — A Vercel cron job runs every 10 minutes, checks eligible orders (timing, price bounds), and executes swaps on-chain via a DEX aggregator
+4. **Automated execution** — A Vercel cron job runs every hour, checks eligible orders (timing, price bounds), and executes swaps on-chain via a DEX aggregator
 
 ## Features
 
@@ -18,14 +18,14 @@ Base Mini Apps are lightweight web apps that run inside the [Coinbase Wallet](ht
 - **DCA order management** — Create, pause, resume, cancel, and manually trigger DCA orders
 - **Execution history** — Browse past executions with amounts, effective price, status, and transaction links
 - **Price bounds** — Optional min/max price filters so orders only execute within a target range
-- **Configurable slippage** — Per-order slippage tolerance (default 1%)
+- **Configurable slippage** — Per-order slippage tolerance (default 0.5%)
 
 ## Architecture
 
 ```
 Next.js Frontend (Yo SDK React) ──> Vercel API Routes ──> Neon PostgreSQL
                                           │
-                                    Vercel Cron (*/10)
+                                    Vercel Cron (hourly)
                                           │
                               ┌───────────┴───────────┐
                               │  YoCAExecutor Proxy (Base)  │
@@ -153,7 +153,7 @@ curl http://localhost:3000/api/cron/execute
 2. Set all environment variables in the Vercel dashboard (see table below)
 3. Deploy the smart contracts to Base mainnet (`DeployMainnet.s.sol`)
 4. Set `NEXT_PUBLIC_YOCA_CONTRACT` to the proxy address in Vercel
-5. The cron job (`/api/cron/execute`) runs automatically every 10 minutes via `vercel.json`
+5. The cron job (`/api/cron/execute`) runs automatically every hour via `vercel.json`
 6. Register your app as a Base Mini App at [base.dev/preview](https://base.dev/preview?tab=account) — see the [Base Mini Apps deployment guide](https://docs.base.org/mini-apps/building-a-mini-app) for details
 
 ## Environment Variables

@@ -12,8 +12,15 @@ const connectSrc = [
   ...(isDev ? ["http://127.0.0.1:*", "http://localhost:*", "ws://127.0.0.1:*", "ws://localhost:*"] : []),
 ].join(" ");
 
+const frameAncestors = [
+  "https://*.coinbase.com",
+  "https://*.base.org",
+  "https://base.org",
+  ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*"] : []),
+].join(" ");
+
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
@@ -26,7 +33,7 @@ const securityHeaders = [
       "img-src 'self' data: https:",
       "font-src 'self' data:",
       `connect-src ${connectSrc}`,
-      "frame-ancestors 'none'",
+      `frame-ancestors ${frameAncestors}`,
     ].join("; "),
   },
   ...(!isDev

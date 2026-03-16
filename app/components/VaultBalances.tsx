@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { formatUnits } from "viem";
@@ -236,10 +237,21 @@ export function VaultBalances({ onDeposit, isRefreshing }: VaultBalancesProps) {
           <button
             type="button"
             className="btn btn-primary"
+            style={{ marginBottom: 12 }}
             onClick={() => onDeposit(STABLE_VAULTS[0]!)}
           >
             Deposit Now
           </button>
+          <Link
+            href="/how-it-works"
+            style={{
+              display: "block",
+              fontSize: 14,
+              color: "var(--text-muted)",
+            }}
+          >
+            How it works &rarr;
+          </Link>
         </div>
       ) : (
         balances.map(({ vault, shares, assets, isLoading: loading }) => (

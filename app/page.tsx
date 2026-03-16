@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAccount, useConnect } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./lib/api";
@@ -79,6 +80,18 @@ function WelcomeScreen() {
       </div>
 
       <div className="welcome-footer">
+        <Link
+          href="/how-it-works"
+          style={{
+            display: "block",
+            textAlign: "center",
+            fontSize: 14,
+            color: "var(--text-muted)",
+            marginBottom: 16,
+          }}
+        >
+          How it works &rarr;
+        </Link>
         {error && (
           <p style={{
             fontSize: 13,
