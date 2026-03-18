@@ -48,7 +48,7 @@ export async function POST(
     );
   }
 
-  const result = await executeSingleOrder(order, order.walletAddress);
+  const result = await executeSingleOrder(order, order.walletAddress, { manual: true });
 
   const [updatedOrder] = await db
     .select()

@@ -1,0 +1,1 @@
+ALTER TABLE "dca_executions" ADD COLUMN "failure_reason" text;

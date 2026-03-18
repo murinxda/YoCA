@@ -9,7 +9,7 @@ Base Mini Apps are lightweight web apps that run inside the [Coinbase Wallet](ht
 1. **Deposit stables** — Deposit USDC or EURC into yoUSD/yoEUR vaults to earn yield while your funds wait to be swapped
 2. **Configure DCA** — Pick a target vault (yoETH or yoBTC), set an amount per execution, choose a period (daily to monthly), and optionally set min/max price bounds
 3. **Approve** — Grant the YoCAExecutor contract a one-time approval to swap your vault tokens
-4. **Automated execution** — A Vercel cron job runs every hour, checks eligible orders (timing, price bounds), and executes swaps on-chain via a DEX aggregator
+4. **Automated execution** — A Vercel cron job runs every hour, checks eligible orders (timing, price bounds), and executes swaps on-chain via a DEX aggregator. If an execution fails or the price is out of bounds, it retries on the next cron tick (up to 3 times) before recording a failure and advancing to the next interval. Manual executions are one-shot and don't affect the retry counter
 
 ## Features
 
@@ -18,6 +18,7 @@ Base Mini Apps are lightweight web apps that run inside the [Coinbase Wallet](ht
 - **DCA order management** — Create, pause, resume, cancel, and manually trigger DCA orders
 - **Execution history** — Browse past executions with amounts, effective price, status, and transaction links
 - **Price bounds** — Optional min/max price filters so orders only execute within a target range
+- **Execution retries** — Failed or out-of-bounds executions are retried on subsequent cron ticks (up to 3 attempts). After max retries, a failure is recorded and the order is delayed to its next scheduled interval. Manual "Execute Now" runs independently — no retries, no side-effects on the cron schedule
 - **Configurable slippage** — Per-order slippage tolerance (default 0.5%)
 
 ## Architecture
@@ -219,6 +220,13 @@ curl http://localhost:3000/api/cron/execute
 ├── scripts/                 # fork.sh, seed-fork.sh
 └── vercel.json              # Cron schedule
 ```
+
+## Partner & Builder Attribution
+
+YoCA integrates with partner and builder programs for on-chain attribution:
+
+- **Yo Protocol Partner ID**: `YoCAMikado` — passed to the Yo SDK `YieldProvider` so deposits and interactions are attributed to YoCA
+- **Base Builder Code**: configured via `NEXT_PUBLIC_BUILDER_CODE` — appended to transactions as an [ERC-8021](https://github.com/ethereum/ERCs/blob/master/ERCS/erc-8021.md) data suffix for Base ecosystem attribution
 
 ## License
 

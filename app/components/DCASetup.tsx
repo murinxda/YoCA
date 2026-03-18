@@ -225,6 +225,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                 const hasBalance = shares > zero;
                 const formattedShares = formatUnits(shares, v.decimals);
                 const formattedAssets = formatUnits(assets, v.decimals);
+                const maxDecimals = v.type === "stable" ? 2 : 3;
                 return (
                   <button
                     key={v.id}
@@ -258,21 +259,20 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                       ) : hasBalance ? (
                         <>
                           <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>
-                            {Number(formattedShares).toLocaleString(undefined, {
+                            {Number(formattedAssets).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: maxDecimals,
                             })}{" "}
                             <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.6 }}>
-                              shares
+                              {v.underlyingSymbol}
                             </span>
                           </div>
                           <div style={{ fontSize: 11, opacity: 0.6 }}>
-                            ≈{" "}
-                            {Number(formattedAssets).toLocaleString(undefined, {
+                            {Number(formattedShares).toLocaleString(undefined, {
                               minimumFractionDigits: 2,
-                              maximumFractionDigits: 3,
+                              maximumFractionDigits: maxDecimals,
                             })}{" "}
-                            {v.underlyingSymbol}
+                            shares
                           </div>
                         </>
                       ) : (
@@ -371,6 +371,18 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
                 </option>
               ))}
             </select>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+              First execution on{" "}
+              {new Intl.DateTimeFormat(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(
+                new Date(Date.now() + periodDays * 86400000)
+              )}
+            </div>
           </div>
 
           <div style={{ marginBottom: 20 }}>
@@ -402,6 +414,9 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
             </button>
             {showAdvanced && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="fade-in">
+                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                  Executions are skipped when the price is outside these bounds.
+                </div>
                 <div>
                   <label className="label" htmlFor="dca-min-price">
                     Min price (optional)

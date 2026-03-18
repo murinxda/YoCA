@@ -5,22 +5,81 @@ import { eq } from "drizzle-orm";
 import { ADDRESSES, type VaultId } from "@/lib/constants";
 import { getSwapQuote, executeOnChainDCA } from "@/lib/keeper";
 
+const MAX_EXECUTION_RETRIES = 3;
+
 export interface ExecutionResult {
   orderId: string;
   status: "success" | "failed" | "skipped";
   reason?: string;
 }
 
+function nextIntervalFromNow(order: DcaOrder) {
+  const next = new Date();
+  next.setDate(next.getDate() + order.periodDays);
+  return next;
+}
+
+function nextIntervalFromScheduled(order: DcaOrder) {
+  const next = new Date(order.nextExecutionAt);
+  next.setDate(next.getDate() + order.periodDays);
+  return next;
+}
+
+async function handleRetriableFailure(
+  order: DcaOrder,
+  reason: string,
+  status: "failed" | "skipped",
+  txHash?: string,
+): Promise<ExecutionResult> {
+  const db = getDb();
+  const newRetryCount = order.retryCount + 1;
+
+  if (newRetryCount >= MAX_EXECUTION_RETRIES) {
+    await db.insert(dcaExecutions).values({
+      orderId: order.id,
+      amountIn: order.amount,
+      txHash: txHash ?? null,
+      failureReason: `${reason} (after ${MAX_EXECUTION_RETRIES} attempts)`,
+      status: "failed",
+    });
+
+    await db
+      .update(dcaOrders)
+      .set({ retryCount: 0, nextExecutionAt: nextIntervalFromScheduled(order) })
+      .where(eq(dcaOrders.id, order.id));
+
+    return {
+      orderId: order.id,
+      status: "failed",
+      reason: `${reason} (max retries reached, delayed to next interval)`,
+    };
+  }
+
+  await db
+    .update(dcaOrders)
+    .set({ retryCount: newRetryCount })
+    .where(eq(dcaOrders.id, order.id));
+
+  return { orderId: order.id, status, reason };
+}
+
+export interface ExecutionOptions {
+  manual?: boolean;
+}
+
 export async function executeSingleOrder(
   order: DcaOrder,
   userAddress: string,
+  options: ExecutionOptions = {},
 ): Promise<ExecutionResult> {
   const db = getDb();
+  const { manual = false } = options;
   const sourceVault = ADDRESSES.vaults[order.sourceVault as VaultId];
   const targetVault = ADDRESSES.vaults[order.targetVault as VaultId];
 
   if (!sourceVault || !targetVault) {
-    return { orderId: order.id, status: "failed", reason: "Invalid vault configuration" };
+    if (manual) return { orderId: order.id, status: "failed", reason: "Invalid vault configuration" };
+    return handleRetriableFailure(order, "Invalid vault configuration", "failed");
   }
 
   const amountIn = BigInt(order.amount);
@@ -34,40 +93,32 @@ export async function executeSingleOrder(
   );
 
   if (!quote) {
-    await db.insert(dcaExecutions).values({
-      orderId: order.id,
-      amountIn: order.amount,
-      status: "failed",
-    });
-    return { orderId: order.id, status: "failed", reason: "Failed to get swap quote" };
+    if (manual) return { orderId: order.id, status: "failed", reason: "Failed to get swap quote" };
+    return handleRetriableFailure(order, "Failed to get swap quote", "failed");
   }
 
   if (order.minPrice) {
     const minPrice = parseFloat(order.minPrice);
     if (quote.price < minPrice) {
-      return {
-        orderId: order.id,
-        status: "skipped",
-        reason: `Price ${quote.price} below min ${minPrice}`,
-      };
+      const reason = `Price ${quote.price} below min ${minPrice}`;
+      if (manual) return { orderId: order.id, status: "skipped", reason };
+      return handleRetriableFailure(order, reason, "skipped");
     }
   }
 
   if (order.maxPrice) {
     const maxPrice = parseFloat(order.maxPrice);
     if (quote.price > maxPrice) {
-      return {
-        orderId: order.id,
-        status: "skipped",
-        reason: `Price ${quote.price} above max ${maxPrice}`,
-      };
+      const reason = `Price ${quote.price} above max ${maxPrice}`;
+      if (manual) return { orderId: order.id, status: "skipped", reason };
+      return handleRetriableFailure(order, reason, "skipped");
     }
   }
 
   const slippageFactor = BigInt(10000 - order.slippageBps);
   const minAmountOut = (quote.expectedAmountOut * slippageFactor) / BigInt(10000);
 
-  const txHash = await executeOnChainDCA({
+  const result = await executeOnChainDCA({
     user: userAddress as Address,
     tokenIn: sourceVault.address,
     tokenOut: targetVault.address,
@@ -77,32 +128,33 @@ export async function executeSingleOrder(
     swapData: quote.swapData,
   });
 
-  if (txHash) {
+  if (result.success && result.txHash) {
     await db.insert(dcaExecutions).values({
       orderId: order.id,
-      txHash,
+      txHash: result.txHash,
       amountIn: order.amount,
       amountOut: quote.expectedAmountOut.toString(),
       price: quote.price.toString(),
       status: "success",
     });
 
-    const nextExecution = new Date();
-    nextExecution.setDate(nextExecution.getDate() + order.periodDays);
+    const nextExecution = manual
+      ? nextIntervalFromNow(order)
+      : nextIntervalFromScheduled(order);
 
     await db
       .update(dcaOrders)
-      .set({ nextExecutionAt: nextExecution })
+      .set({ retryCount: 0, nextExecutionAt: nextExecution })
       .where(eq(dcaOrders.id, order.id));
 
     return { orderId: order.id, status: "success" };
   }
 
-  await db.insert(dcaExecutions).values({
-    orderId: order.id,
-    amountIn: order.amount,
-    status: "failed",
-  });
+  const failReason = result.error ?? "On-chain execution failed";
 
-  return { orderId: order.id, status: "failed", reason: "On-chain execution failed" };
+  if (manual) {
+    return { orderId: order.id, status: "failed", reason: failReason };
+  }
+
+  return handleRetriableFailure(order, failReason, "failed", result.txHash);
 }

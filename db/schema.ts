@@ -4,6 +4,7 @@ import {
   varchar,
   numeric,
   integer,
+  text,
   timestamp,
   pgEnum,
 } from "drizzle-orm/pg-core";
@@ -40,6 +41,7 @@ export const dcaOrders = pgTable("dca_orders", {
   minPrice: numeric("min_price", { precision: 36, scale: 18 }),
   maxPrice: numeric("max_price", { precision: 36, scale: 18 }),
   status: dcaStatusEnum("status").notNull().default("active"),
+  retryCount: integer("retry_count").notNull().default(0),
   nextExecutionAt: timestamp("next_execution_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -54,6 +56,7 @@ export const dcaExecutions = pgTable("dca_executions", {
   amountOut: numeric("amount_out", { precision: 78, scale: 0 }),
   price: numeric("price", { precision: 36, scale: 18 }),
   status: executionStatusEnum("status").notNull().default("pending"),
+  failureReason: text("failure_reason"),
   executedAt: timestamp("executed_at").defaultNow().notNull(),
 });
 

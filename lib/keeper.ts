@@ -221,6 +221,12 @@ export async function getSwapQuote(
   return getMainnetSwapQuote(tokenIn, tokenOut, amountIn, sellDecimals, buyDecimals);
 }
 
+export interface OnChainDCAResult {
+  success: boolean;
+  txHash?: `0x${string}`;
+  error?: string;
+}
+
 export async function executeOnChainDCA(params: {
   user: Address;
   tokenIn: Address;
@@ -229,7 +235,7 @@ export async function executeOnChainDCA(params: {
   minAmountOut: bigint;
   router: Address;
   swapData: `0x${string}`;
-}): Promise<`0x${string}` | null> {
+}): Promise<OnChainDCAResult> {
   try {
     const walletClient = getKeeperWalletClient();
     const publicClient = getPublicClient();
@@ -255,12 +261,13 @@ export async function executeOnChainDCA(params: {
 
     if (receipt.status === "reverted") {
       console.error("DCA transaction reverted:", hash);
-      return null;
+      return { success: false, txHash: hash, error: "Transaction reverted" };
     }
 
-    return hash;
+    return { success: true, txHash: hash };
   } catch (error) {
     console.error("Failed to execute DCA on-chain:", error);
-    return null;
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: message };
   }
 }

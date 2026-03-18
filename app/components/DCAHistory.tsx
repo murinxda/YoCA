@@ -122,6 +122,17 @@ export function DCAHistory({ executions }: DCAHistoryProps) {
                       Price: {priceNum.toFixed(6)}
                     </div>
                   )}
+                  {exec.status === "failed" && exec.failureReason && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--danger)",
+                        marginTop: 4,
+                      }}
+                    >
+                      {exec.failureReason}
+                    </div>
+                  )}
                 </div>
                 <div
                   style={{
@@ -138,7 +149,7 @@ export function DCAHistory({ executions }: DCAHistoryProps) {
                       rel="noopener noreferrer"
                       style={{ fontSize: 12 }}
                     >
-                      View tx
+                      {exec.status === "failed" ? "View failed tx" : "View tx"}
                     </a>
                   )}
                 </div>

@@ -183,9 +183,13 @@ export default function Home() {
 
   const handleDepositSuccess = useCallback(() => {
     setIsRefreshingVaults(true);
-    queryClient.invalidateQueries().then(() => {
-      setIsRefreshingVaults(false);
-    });
+    // Brief delay to let the RPC node index the new block, then force
+    // refetch all active queries and wait for them to settle.
+    setTimeout(() => {
+      queryClient.refetchQueries({ type: "active" }).then(() => {
+        setIsRefreshingVaults(false);
+      });
+    }, 400);
   }, [queryClient]);
 
   const applyOrderUpdate = (updated: DcaOrder) => {
@@ -357,6 +361,54 @@ export default function Home() {
         onClose={() => setShowDCASetup(false)}
         onSubmit={handleCreateDCA}
       />
+
+      <footer
+        style={{
+          marginTop: 48,
+          textAlign: "center",
+          fontSize: 13,
+          color: "var(--text-muted)",
+        }}
+      >
+        <div
+          className="container"
+          style={{
+            borderTop: "1px solid var(--border)",
+            padding: "24px 16px 0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 20,
+              flexWrap: "wrap",
+              marginBottom: 12,
+            }}
+          >
+            <Link href="/how-it-works" style={{ color: "var(--text-secondary)" }}>
+              How it works
+            </Link>
+            <a
+              href="https://docs.yo.xyz"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Yo Protocol Docs
+            </a>
+            <a
+              href="https://github.com/murinxda/YoCA"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              GitHub
+            </a>
+          </div>
+          <div>YoCA — Yo Cost Average</div>
+        </div>
+      </footer>
     </div>
   );
 }
