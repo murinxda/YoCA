@@ -7,7 +7,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base } from "viem/chains";
-import { CHAIN, ADDRESSES, IS_TESTNET } from "./constants";
+import { CHAIN, ADDRESSES, IS_TESTNET, DATA_SUFFIX } from "./constants";
 
 const YOCA_DCA_ABI = [
   {
@@ -42,6 +42,7 @@ export function getKeeperWalletClient() {
     account,
     chain: CHAIN,
     transport: http(getRpcUrl()),
+    dataSuffix: DATA_SUFFIX,
   });
 }
 

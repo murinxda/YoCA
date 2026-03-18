@@ -1,5 +1,6 @@
 import { type Address, type Chain, defineChain } from "viem";
 import { base, baseSepolia } from "viem/chains";
+import { Attribution } from "ox/erc8021";
 
 export const SUPPORTED_CHAIN_ID = Number(
   process.env.NEXT_PUBLIC_CHAIN_ID || "84532"
@@ -163,3 +164,8 @@ export const PERIOD_OPTIONS = [
 ];
 
 export const DEFAULT_SLIPPAGE_BPS = 50; // 0.5%
+export const YOCA_FEE_BPS = BigInt(5); // 0.05% — must match contract feeBps
+
+export const DATA_SUFFIX = process.env.NEXT_PUBLIC_BUILDER_CODE
+  ? Attribution.toDataSuffix({ codes: [process.env.NEXT_PUBLIC_BUILDER_CODE] })
+  : undefined;

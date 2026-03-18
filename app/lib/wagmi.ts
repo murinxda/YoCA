@@ -1,12 +1,7 @@
 import { http, createConfig, createStorage, cookieStorage } from "wagmi";
 import { base, baseSepolia } from "wagmi/chains";
 import { injected, coinbaseWallet, baseAccount, metaMask } from "wagmi/connectors";
-import { Attribution } from "ox/erc8021";
-import { CHAIN, IS_LOCAL_FORK } from "@/lib/constants";
-
-const DATA_SUFFIX = Attribution.toDataSuffix({
-  codes: [process.env.NEXT_PUBLIC_BUILDER_CODE!],
-});
+import { CHAIN, IS_LOCAL_FORK, DATA_SUFFIX } from "@/lib/constants";
 
 const chains = IS_LOCAL_FORK
   ? ([CHAIN, base, baseSepolia] as const)
