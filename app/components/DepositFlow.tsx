@@ -157,7 +157,7 @@ function useMainnetDeposit(vaultAddress: Address | undefined) {
   });
 
   const {
-    approveMax: yoApproveMax,
+    approve: yoApprove,
     isLoading: yoApproveLoading,
     isSuccess: yoApproveSuccess,
     hash: yoApproveHash,
@@ -168,10 +168,10 @@ function useMainnetDeposit(vaultAddress: Address | undefined) {
   });
 
   const approve = useCallback(
-    async (_amount: bigint) => {
-      await yoApproveMax();
+    async (amount: bigint) => {
+      await yoApprove(amount);
     },
-    [yoApproveMax],
+    [yoApprove],
   );
 
   const deposit = useCallback(
@@ -254,10 +254,10 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
     query: { enabled: !!assetAddress && !!address && !!strategy.spender },
   });
 
+  const allowanceLoaded = allowance !== undefined;
   const needsApproval =
     amountBigInt > BigInt(0) &&
-    allowance !== undefined &&
-    allowance < amountBigInt;
+    (!allowanceLoaded || allowance < amountBigInt);
 
   // Deposit preview: expected shares for the entered amount
   const { data: previewShares, isLoading: previewLoading } = useReadContract({
@@ -287,7 +287,9 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
     if (strategy.approveConfirmed && step === "approving") {
       refetchAllowance();
       setStep("depositing");
-      strategy.deposit(amountBigInt);
+      Promise.resolve(strategy.deposit(amountBigInt)).catch(() => {
+        // Errors are surfaced via strategy.depositError
+      });
     }
   }, [strategy.approveConfirmed]);
 
@@ -644,16 +646,18 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={!amountBigInt || isProcessing}
+                  disabled={!amountBigInt || isProcessing || (!allowanceLoaded && amountBigInt > BigInt(0))}
                   onClick={handleSubmit}
                 >
                   {step === "approving"
                     ? "Approving..."
                     : step === "depositing"
                       ? "Depositing..."
-                      : needsApproval
-                        ? "Approve & Deposit"
-                        : "Deposit"}
+                      : !allowanceLoaded && amountBigInt > BigInt(0)
+                        ? "Checking allowance..."
+                        : needsApproval
+                          ? "Approve & Deposit"
+                          : "Deposit"}
                 </button>
               )}
             </div>
