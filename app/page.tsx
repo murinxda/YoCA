@@ -35,7 +35,8 @@ function WelcomeScreen() {
         const hasInjectedProvider = typeof window !== "undefined" && !!window.ethereum;
         const connector = hasInjectedProvider
           ? connectors.find((c) => c.id === "injected") ?? connectors[0]!
-          : connectors.find((c) => c.id === "com.coinbase.wallet") ?? connectors[0]!;
+          : connectors.find((c) => c.id === "metaMaskSDK") ?? 
+            connectors.find((c) => c.id === "coinbaseWalletSDK") ?? connectors[0]!;
         const result = await connectAsync({ connector });
         await signIn(result.accounts[0]);
       }

@@ -1,4 +1,4 @@
-import { type Address } from "viem";
+import { type Address, type Chain, defineChain } from "viem";
 import { base, baseSepolia } from "viem/chains";
 
 export const SUPPORTED_CHAIN_ID = Number(
@@ -9,10 +9,25 @@ export const IS_TESTNET = SUPPORTED_CHAIN_ID === baseSepolia.id;
 
 const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL ?? "";
 export const IS_LOCAL_FORK =
-  !IS_TESTNET &&
-  (rpcUrl.includes("127.0.0.1") || rpcUrl.includes("localhost"));
+  SUPPORTED_CHAIN_ID !== base.id &&
+  SUPPORTED_CHAIN_ID !== baseSepolia.id &&
+  rpcUrl !== "";
 
-export const CHAIN = IS_TESTNET ? baseSepolia : base;
+const anvilBase: Chain = defineChain({
+  ...base,
+  id: SUPPORTED_CHAIN_ID,
+  name: "Base (Anvil Fork)",
+  rpcUrls: {
+    default: { http: [rpcUrl || "http://127.0.0.1:8545"] },
+  },
+  testnet: true,
+});
+
+export const CHAIN: Chain = IS_TESTNET
+  ? baseSepolia
+  : IS_LOCAL_FORK
+    ? anvilBase
+    : base;
 
 export type VaultId = "yoUSD" | "yoEUR" | "yoETH" | "yoBTC";
 

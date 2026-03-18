@@ -199,31 +199,34 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openMenuId]);
 
-  if (isLoading) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <h2 className="section-title">Active DCA Orders</h2>
-        {[1, 2].map((i) => (
-          <div key={i} className="card" style={{ padding: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-              <div>
-                <div className="skeleton" style={{ width: 120, height: 14, marginBottom: 8 }} />
-                <div className="skeleton" style={{ width: 200, height: 18 }} />
-              </div>
-              <div className="skeleton" style={{ width: 60, height: 24, borderRadius: 999 }} />
-            </div>
-            <div className="skeleton" style={{ width: 160, height: 13, marginBottom: 16 }} />
-            <div className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-md)" }} />
-          </div>
-        ))}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!pendingAction) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [pendingAction]);
 
-  if (orders.length === 0) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <h2 className="section-title">Active DCA Orders</h2>
+  const config = pendingAction ? ACTION_CONFIG[pendingAction.type] : null;
+
+  const renderContent = () => {
+    if (isLoading) {
+      return [1, 2].map((i) => (
+        <div key={i} className="card" style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <div>
+              <div className="skeleton" style={{ width: 120, height: 14, marginBottom: 8 }} />
+              <div className="skeleton" style={{ width: 200, height: 18 }} />
+            </div>
+            <div className="skeleton" style={{ width: 60, height: 24, borderRadius: 999 }} />
+          </div>
+          <div className="skeleton" style={{ width: 160, height: 13, marginBottom: 16 }} />
+          <div className="skeleton" style={{ width: "100%", height: 44, borderRadius: "var(--radius-md)" }} />
+        </div>
+      ));
+    }
+
+    if (orders.length === 0) {
+      return (
         <div
           className="card"
           style={{
@@ -248,16 +251,10 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
             How it works &rarr;
           </Link>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  const config = pendingAction ? ACTION_CONFIG[pendingAction.type] : null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <h2 className="section-title">Active DCA Orders</h2>
-      {orders.map((order) => {
+    return orders.map((order) => {
         const sourceVault = ADDRESSES.vaults[order.sourceVault as VaultId];
         const targetVault = ADDRESSES.vaults[order.targetVault as VaultId];
         const nextExec = new Date(order.nextExecutionAt);
@@ -375,7 +372,13 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
             ) : null}
           </div>
         );
-      })}
+      });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <h2 className="section-title">Active DCA Orders</h2>
+      {renderContent()}
 
       {/* Confirmation Dialog */}
       {pendingAction && config && (
@@ -399,6 +402,9 @@ export function DCAList({ orders, isLoading, onPause, onCancel, onExecuteNow }: 
             style={{
               width: "100%",
               maxWidth: 400,
+              maxHeight: "90vh",
+              overflow: "auto",
+              overscrollBehavior: "contain",
               padding: 24,
             }}
           >

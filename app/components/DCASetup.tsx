@@ -153,6 +153,13 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -188,6 +195,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
           maxWidth: 400,
           maxHeight: "90vh",
           overflow: "auto",
+          overscrollBehavior: "contain",
         }}
         onClick={(e) => e.stopPropagation()}
       >

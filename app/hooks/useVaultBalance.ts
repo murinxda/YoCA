@@ -3,7 +3,7 @@
 import { useAccount, useReadContract } from "wagmi";
 import { useUserBalance } from "@yo-protocol/react";
 import { erc20Abi, zeroAddress, type Address } from "viem";
-import { ADDRESSES, STABLE_VAULTS, IS_TESTNET } from "@/lib/constants";
+import { ADDRESSES, STABLE_VAULTS, IS_TESTNET, IS_LOCAL_FORK } from "@/lib/constants";
 
 const ZERO = BigInt(0);
 
@@ -76,7 +76,7 @@ export function useVaultBalance(
   const testnet = useTestnetVaultBalance(vaultAddress, userAddress);
   const mainnet = useMainnetVaultBalance(vaultAddress, userAddress);
 
-  return IS_TESTNET ? testnet : mainnet;
+  return (IS_TESTNET || IS_LOCAL_FORK) ? testnet : mainnet;
 }
 
 export function useStableVaultBalances() {

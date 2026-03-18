@@ -6,6 +6,7 @@ import {
   encodeFunctionData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { base } from "viem/chains";
 import { CHAIN, ADDRESSES, IS_TESTNET } from "./constants";
 
 const YOCA_DCA_ABI = [
@@ -159,7 +160,7 @@ async function getMainnetSwapQuote(
 
   try {
     const params = new URLSearchParams({
-      chainId: String(CHAIN.id),
+      chainId: String(base.id),
       sellToken: tokenIn,
       buyToken: tokenOut,
       sellAmount: amountIn.toString(),
@@ -236,6 +237,8 @@ export async function executeOnChainDCA(params: {
     const hash = await walletClient.writeContract({
       address: ADDRESSES.yocaDCA,
       abi: YOCA_DCA_ABI,
+      chain: CHAIN,
+      account: walletClient.account,
       functionName: "executeDCA",
       args: [
         params.user,

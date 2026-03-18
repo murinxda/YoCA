@@ -23,7 +23,7 @@
     "@yo-protocol/react": "^0.0.3",
     "drizzle-orm": "^0.39.0",
     "iron-session": "^8.0.4",
-    "next": "15.3.6",
+    "next": "15.5.13",
     "ox": "^0.14.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

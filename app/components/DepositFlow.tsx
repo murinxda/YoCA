@@ -374,6 +374,13 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
   const basescanBase =
     CHAIN.blockExplorers?.default.url ?? "https://basescan.org";
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -409,6 +416,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
           maxWidth: 400,
           maxHeight: "90vh",
           overflow: "auto",
+          overscrollBehavior: "contain",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -495,7 +503,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
           <>
             <div style={{ marginBottom: 16 }}>
               <label className="label" htmlFor="deposit-amount">
-                Amount ({vault?.underlyingSymbol ?? ""})
+                Amount ({vault?.underlyingSymbol ?? ""} on {CHAIN.name})
               </label>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
