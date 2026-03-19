@@ -3,7 +3,7 @@
 import { useAccount, useReadContract } from "wagmi";
 import { useUserBalance } from "@yo-protocol/react";
 import { erc20Abi, zeroAddress, type Address } from "viem";
-import { ADDRESSES, STABLE_VAULTS, IS_TESTNET, IS_LOCAL_FORK } from "@/lib/constants";
+import { ADDRESSES, STABLE_VAULTS, IS_TESTNET, IS_LOCAL_FORK, SUPPORTED_CHAIN_ID } from "@/lib/constants";
 
 const ZERO = BigInt(0);
 
@@ -31,6 +31,7 @@ function useTestnetVaultBalance(
     address: vaultAddress,
     abi: erc20Abi,
     functionName: "balanceOf",
+    chainId: SUPPORTED_CHAIN_ID,
     args: userAddress ? [userAddress] : undefined,
     query: { enabled: valid },
   });
@@ -41,6 +42,7 @@ function useTestnetVaultBalance(
     address: vaultAddress,
     abi: convertToAssetsAbi,
     functionName: "convertToAssets",
+    chainId: SUPPORTED_CHAIN_ID,
     args: [sharesValue],
     query: { enabled: valid && sharesValue > ZERO },
   });

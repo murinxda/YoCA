@@ -216,19 +216,28 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
 
   const vaultAddress = vault?.address as Address | undefined;
 
-  // Read asset address and balance via wagmi (works everywhere)
-  const { data: assetAddress } = useReadContract({
+  // Both deposit strategies (hooks must be called unconditionally)
+  // Mainnet hook called first so we can use its SDK-resolved asset address
+  // as a fallback when the wagmi read below fails (e.g. public RPC throttled).
+  const mainnet = useMainnetDeposit(vaultAddress);
+
+  const { data: assetAddressOnChain } = useReadContract({
     address: vaultAddress,
     abi: vaultAbi,
     functionName: "asset",
+    chainId: SUPPORTED_CHAIN_ID,
     query: { enabled: !!vaultAddress },
   });
+
+  const sdkAssetAddress = mainnet.vaultState?.asset as Address | undefined;
+  const assetAddress = assetAddressOnChain ?? sdkAssetAddress;
 
   const { data: assetBalance } = useReadContract({
     address: assetAddress,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+    chainId: SUPPORTED_CHAIN_ID,
     query: { enabled: !!assetAddress && !!address },
   });
 
@@ -236,9 +245,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
     ? parseUnits(amount, vault?.decimals ?? 6)
     : BigInt(0);
 
-  // Both deposit strategies (hooks must be called unconditionally)
   const testnet = useTestnetDeposit(vaultAddress, assetAddress, address);
-  const mainnet = useMainnetDeposit(vaultAddress);
   const useDirectDeposit = IS_TESTNET || IS_LOCAL_FORK;
   const strategy = useDirectDeposit ? testnet : mainnet;
 
@@ -251,6 +258,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
       address && strategy.spender
         ? [address, strategy.spender]
         : undefined,
+    chainId: SUPPORTED_CHAIN_ID,
     query: { enabled: !!assetAddress && !!address && !!strategy.spender },
   });
 
@@ -265,6 +273,7 @@ export function DepositFlow({ vault, isOpen, onClose, onDepositSuccess }: Deposi
     abi: vaultAbi,
     functionName: "previewDeposit",
     args: [amountBigInt],
+    chainId: SUPPORTED_CHAIN_ID,
     query: { enabled: useDirectDeposit && !!vaultAddress && amountBigInt > BigInt(0) },
   });
 

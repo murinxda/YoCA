@@ -82,6 +82,7 @@ export function DCASetup({ isOpen, onClose, onSubmit }: DCASetupProps) {
     address: sourceVaultAddress,
     abi: erc20Abi,
     functionName: "allowance",
+    chainId: SUPPORTED_CHAIN_ID,
     args: address && sourceVaultAddress ? [address, yocaDCA] : undefined,
     query: { enabled: !!address && !!sourceVaultAddress },
   });
