@@ -43,6 +43,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Match every UA so metadata is blocking and emitted in <head> (not streamed into <body>).
+  htmlLimitedBots: /.*/,
   allowedDevOrigins: ["*"],
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
