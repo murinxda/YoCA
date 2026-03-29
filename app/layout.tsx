@@ -33,10 +33,13 @@ export const metadata: Metadata = {
   applicationName: "YoCA",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon-48.png", sizes: "48x48", type: "image/png" },
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
+    shortcut: "/favicon.ico",
     apple: "/apple-icon",
   },
   openGraph: {
@@ -45,12 +48,21 @@ export const metadata: Metadata = {
     title: "YoCA – Yo Cost Average",
     description:
       "Automated DCA into yield-bearing Yo Protocol vaults on Base. Deposit stables, set your strategy, and earn yield while you accumulate.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "YoCA – Automated DCA into yield-bearing vaults on Base",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "YoCA – Yo Cost Average",
     description:
       "Automated DCA into yield-bearing Yo Protocol vaults on Base",
+    images: ["/opengraph-image"],
   },
   other: {
     "base:app_id": "69b69047993ed474082936d4",
